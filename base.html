@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Blood Bank Live Radar{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="topbar">
+        <a href="{{ url_for('home') }}" class="brand">
+            <span class="drop">●</span>
+            <span class="brand-text">Blood Bank Live Radar</span>
+        </a>
+        <nav class="topbar-nav">
+            {% if session.get('user_id') %}
+                <span class="user-chip">{{ session.get('name') }} · {{ session.get('role') }}</span>
+                <a href="{{ url_for('logout') }}" class="btn btn-ghost">Log out</a>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="btn btn-ghost">Log in</a>
+                <a href="{{ url_for('signup') }}" class="btn btn-primary">Sign up</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="flash-wrap">
+                {% for message in messages %}
+                    <div class="flash">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <main class="page">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

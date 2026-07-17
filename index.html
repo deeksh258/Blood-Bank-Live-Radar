@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+    <p class="eyebrow">Emergency blood availability, in real time</p>
+    <h1>Find blood, <span class="accent">fast.</span></h1>
+    <p class="hero-sub">
+        See live stock across nearby blood banks, and broadcast an SOS to registered
+        donors the moment a match isn't available nearby.
+    </p>
+    <div class="hero-actions">
+        <a href="{{ url_for('signup') }}?role=requester" class="btn btn-primary btn-lg">I need blood</a>
+        <a href="{{ url_for('signup') }}?role=donor" class="btn btn-outline btn-lg">I want to donate</a>
+    </div>
+</section>
+
+<section class="how">
+    <h2>How it works</h2>
+    <div class="how-grid">
+        <div class="how-card">
+            <span class="how-step">01</span>
+            <h3>Search</h3>
+            <p>Select the blood type needed and see live stock at nearby centres.</p>
+        </div>
+        <div class="how-card">
+            <span class="how-step">02</span>
+            <h3>Broadcast</h3>
+            <p>No stock nearby? One tap sends an SOS to matching, available donors.</p>
+        </div>
+        <div class="how-card">
+            <span class="how-step">03</span>
+            <h3>Respond</h3>
+            <p>Donors get alerted instantly and confirm they're available to help.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

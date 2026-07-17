@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="dash">
+    <div class="dash-header">
+        <div>
+            <p class="eyebrow">Donor dashboard</p>
+            <h1>Hi, {{ session.get('name') }}</h1>
+        </div>
+        <div class="profile-pill">
+            <span class="blood-chip">{{ profile.blood_type }}</span>
+        </div>
+    </div>
+
+    <div class="card availability-card">
+        <div>
+            <h3>Availability</h3>
+            <p class="muted">Toggle off if you're not able to donate right now.</p>
+        </div>
+        <button id="availabilityToggle"
+                class="toggle {{ 'toggle-on' if profile.available else 'toggle-off' }}"
+                data-available="{{ profile.available }}">
+            <span class="toggle-dot"></span>
+        </button>
+    </div>
+
+    <h2 class="section-title">Active SOS alerts matching your blood type</h2>
+    <div class="alert-list" id="alertList">
+        {% if alerts|length == 0 %}
+            <p class="empty-state">No active alerts right now. You'll see requests here the moment someone nearby needs {{ profile.blood_type }}.</p>
+        {% endif %}
+        {% for alert in alerts %}
+        <div class="alert-card" data-sos-id="{{ alert.id }}">
+            <div>
+                <p class="alert-type">{{ alert.blood_type }} needed</p>
+                <p class="muted">Requested by {{ alert.requester_name }}{% if alert.requester_location %} · {{ alert.requester_location }}{% endif %}</p>
+                <p class="timestamp">{{ alert.created_at }}</p>
+            </div>
+            {% if alert.already_responded %}
+                <span class="responded-badge">✓ You responded</span>
+            {% else %}
+                <button class="btn btn-primary respond-btn" data-sos-id="{{ alert.id }}">I can help</button>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const toggle = document.getElementById('availabilityToggle');
+    toggle.addEventListener('click', async () => {
+        const res = await fetch("{{ url_for('toggle_availability') }}", { method: 'POST' });
+        const data = await res.json();
+        toggle.classList.toggle('toggle-on', data.available);
+        toggle.classList.toggle('toggle-off', !data.available);
+    });
+
+    document.querySelectorAll('.respond-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            const sosId = btn.dataset.sosId;
+            btn.disabled = true;
+            btn.textContent = 'Sending…';
+            await fetch(`/api/sos/${sosId}/respond`, { method: 'POST' });
+            btn.outerHTML = '<span class="responded-badge">✓ You responded</span>';
+        });
+    });
+</script>
+{% endblock %}

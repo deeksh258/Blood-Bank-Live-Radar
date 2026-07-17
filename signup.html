@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="auth-wrap">
+    <div class="auth-card auth-card-wide">
+        <h1>Create your account</h1>
+
+        <div class="role-toggle" id="roleToggle">
+            <button type="button" class="role-btn" data-role="requester" id="roleRequesterBtn">
+                I need blood
+            </button>
+            <button type="button" class="role-btn" data-role="donor" id="roleDonorBtn">
+                I want to donate
+            </button>
+        </div>
+
+        <form method="POST" action="{{ url_for('signup') }}" id="signupForm">
+            <input type="hidden" name="role" id="roleInput" value="requester">
+
+            <label>Full name
+                <input type="text" name="name" required>
+            </label>
+            <label>Email
+                <input type="email" name="email" required>
+            </label>
+            <label>Password
+                <input type="password" name="password" required minlength="6">
+            </label>
+            <label>Location (city / area)
+                <input type="text" name="location" placeholder="e.g. Andheri West, Mumbai">
+            </label>
+
+            <div id="donorFields" class="donor-fields" hidden>
+                <label>Blood type
+                    <select name="blood_type">
+                        {% for bt in blood_types %}
+                        <option value="{{ bt }}">{{ bt }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Last donation date <span class="optional">(optional)</span>
+                    <input type="date" name="last_donation_date">
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">Create account</button>
+        </form>
+        <p class="auth-switch">Already have an account? <a href="{{ url_for('login') }}">Log in</a></p>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const roleInput = document.getElementById('roleInput');
+    const donorFields = document.getElementById('donorFields');
+    const requesterBtn = document.getElementById('roleRequesterBtn');
+    const donorBtn = document.getElementById('roleDonorBtn');
+
+    function setRole(role) {
+        roleInput.value = role;
+        donorFields.hidden = role !== 'donor';
+        requesterBtn.classList.toggle('active', role === 'requester');
+        donorBtn.classList.toggle('active', role === 'donor');
+    }
+
+    requesterBtn.addEventListener('click', () => setRole('requester'));
+    donorBtn.addEventListener('click', () => setRole('donor'));
+
+    const params = new URLSearchParams(window.location.search);
+    setRole(params.get('role') === 'donor' ? 'donor' : 'requester');
+</script>
+{% endblock %}

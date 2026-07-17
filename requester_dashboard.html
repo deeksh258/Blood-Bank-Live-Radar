@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="dash">
+    <div class="dash-header">
+        <div>
+            <p class="eyebrow">Requester dashboard</p>
+            <h1>Hi, {{ session.get('name') }}</h1>
+        </div>
+    </div>
+
+    <h2 class="section-title">Select blood type needed</h2>
+    <div class="type-grid" id="typeGrid">
+        {% for bt in blood_types %}
+        <button class="type-btn" data-type="{{ bt }}">{{ bt }}</button>
+        {% endfor %}
+    </div>
+    <p class="rare-note" id="rareNote" hidden>
+        This is a rare type — broadcasting an SOS is recommended if stock is low.
+    </p>
+
+    <h2 class="section-title">Nearby availability</h2>
+    <div class="bank-list" id="bankList">
+        <p class="empty-state">Select a blood type above to see live stock nearby.</p>
+    </div>
+
+    <div class="sos-banner" id="sosBanner" hidden>
+        <p>No nearby centre currently has this type in stock. Broadcasting an SOS alerts registered donors directly.</p>
+    </div>
+
+    <div class="sos-feed card" id="sosFeed" hidden>
+        <div class="sos-feed-header">
+            <span class="pulse-dot"></span>
+            <span>SOS live</span>
+        </div>
+        <p id="sosStatusText" class="muted"></p>
+        <ul id="responseList" class="response-list"></ul>
+    </div>
+</section>
+
+<div class="sos-bar">
+    <button id="sosButton" class="btn btn-sos" disabled>Select a blood type first</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const RARE_TYPES = JSON.parse('{{ rare_types|tojson|safe }}');
+    let selectedType = null;
+    let activeSosId = null;
+    let pollTimer = null;
+
+    const typeGrid = document.getElementById('typeGrid');
+    const rareNote = document.getElementById('rareNote');
+    const bankList = document.getElementById('bankList');
+    const sosBanner = document.getElementById('sosBanner');
+    const sosButton = document.getElementById('sosButton');
+    const sosFeed = document.getElementById('sosFeed');
+    const sosStatusText = document.getElementById('sosStatusText');
+    const responseList = document.getElementById('responseList');
+
+    const statusLabel = { available: 'Available', low: 'Low stock', out: 'Out of stock' };
+
+    typeGrid.querySelectorAll('.type-btn').forEach((btn) => {
+        btn.addEventListener('click', () => selectType(btn.dataset.type, btn));
+    });
+
+    async function selectType(type, btnEl) {
+        selectedType = type;
+        activeSosId = null;
+        clearInterval(pollTimer);
+        sosFeed.hidden = true;
+        responseList.innerHTML = '';
+
+        typeGrid.querySelectorAll('.type-btn').forEach((b) => b.classList.remove('active'));
+        btnEl.classList.add('active');
+
+        rareNote.hidden = !RARE_TYPES.includes(type);
+        sosButton.disabled = false;
+        sosButton.textContent = `Broadcast SOS for ${type}`;
+
+        bankList.innerHTML = '<p class="empty-state">Loading nearby centres…</p>';
+        const res = await fetch(`/api/banks/${type}`);
+        const banks = await res.json();
+
+        bankList.innerHTML = '';
+        banks.forEach((b) => {
+            const row = document.createElement('div');
+            row.className = 'bank-row';
+            row.innerHTML = `
+                <div>
+                    <p class="bank-name">${b.name}</p>
+                    <p class="muted">${b.distance_km} km</p>
+                </div>
+                <span class="status-pill status-${b.status}">${statusLabel[b.status]}</span>
+            `;
+            bankList.appendChild(row);
+        });
+
+        const anyAvailable = banks.some((b) => b.status === 'available');
+        sosBanner.hidden = anyAvailable;
+    }
+
+    sosButton.addEventListener('click', async () => {
+        if (!selectedType) return;
+        sosButton.disabled = true;
+        sosButton.textContent = 'Broadcasting…';
+
+        const res = await fetch('/api/sos/broadcast', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ blood_type: selectedType }),
+        });
+        const data = await res.json();
+        activeSosId = data.sos_id;
+
+        sosFeed.hidden = false;
+        sosStatusText.textContent = `Alert sent to ${data.matching_donors} matching donor(s). Waiting for responses…`;
+        responseList.innerHTML = '';
+
+        pollTimer = setInterval(pollResponses, 2500);
+        pollResponses();
+
+        sosButton.disabled = false;
+        sosButton.textContent = `Broadcast SOS for ${selectedType}`;
+    });
+
+    async function pollResponses() {
+        if (!activeSosId) return;
+        const res = await fetch(`/api/sos/${activeSosId}/responses`);
+        const responses = await res.json();
+        responseList.innerHTML = '';
+        responses.forEach((r) => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span class="check">✓</span> <strong>${r.name}</strong> responded — available to donate`;
+            responseList.appendChild(li);
+        });
+        if (responses.length > 0) {
+            sosStatusText.textContent = `${responses.length} donor(s) have responded so far.`;
+        }
+    }
+</script>
+{% endblock %}
